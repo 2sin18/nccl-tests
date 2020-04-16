@@ -710,6 +710,18 @@ testResult_t run() {
     if (p == proc) break;
     if (hostHashs[p] == hostHashs[proc]) localRank++;
   }
+#else
+  char* world_size_str = getenv("WORLD_SIZE");
+  if (world_size_str) {
+    nProcs = strtol(world_size_str, NULL, 0);
+    if (nProcs == 0) {
+      nProcs = 1;
+    }
+  }
+  char* rank_str = getenv("RANK");
+  if (rank_str) {
+    proc = strtol(rank_str, NULL, 0);
+  }
 #endif
   is_main_thread = (proc == 0) ? 1 : 0;
 
@@ -746,11 +758,13 @@ testResult_t run() {
 #endif
 
   ncclUniqueId ncclId;
+#ifdef MPI_SUPPORT
   if (proc == 0) {
     NCCLCHECK(ncclGetUniqueId(&ncclId));
   }
-#ifdef MPI_SUPPORT
   MPI_Bcast(&ncclId, sizeof(ncclId), MPI_BYTE, 0, MPI_COMM_WORLD);
+#else
+  NCCLCHECK(ncclGetUniqueId(&ncclId));
 #endif
   cudaStream_t streams[nGpus*nThreads];
   void* sendbuffs[nGpus*nThreads];
